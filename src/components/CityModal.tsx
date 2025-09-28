@@ -7,15 +7,8 @@ import {
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
-
-interface City {
-  id: number;
-  name: string;
-  country: string;
-  latitude: number;
-  longitude: number;
-  admin1?: string;
-}
+import { useCitySearch } from "@/hooks/useCitySearch";
+import type { City } from "@/types";
 
 interface CityModalProps {
   open: boolean;
@@ -29,40 +22,42 @@ export function CityModal({
   onCitySelect,
 }: CityModalProps) {
   const [searchQuery, setSearchQuery] = useState("");
-  const [searchResults, setSearchResults] = useState<City[]>([]);
-  const [isLoading, setIsLoading] = useState(false);
+  const [debouncedQuery, setDebouncedQuery] = useState("");
 
-  const handleSearch = async () => {
-    if (!searchQuery.trim()) return;
+  const {
+    data: searchResults = [],
+    isLoading,
+    error,
+  } = useCitySearch(debouncedQuery);
 
-    setIsLoading(true);
-    try {
-      // Open Meteo Geocoding API
-      const response = await fetch(
-        `https://geocoding-api.open-meteo.com/v1/search?name=${encodeURIComponent(
-          searchQuery
-        )}&count=10&language=hu&format=json`
-      );
-      const data = await response.json();
-      setSearchResults(data.results || []);
-    } catch (error) {
-      console.error("City search error:", error);
-      setSearchResults([]);
-    } finally {
-      setIsLoading(false);
-    }
+  const handleSearch = () => {
+    setDebouncedQuery(searchQuery.trim());
   };
 
   const handleCitySelect = (city: City) => {
     onCitySelect(city);
+    handleModalClose();
+  };
+
+  const handleModalClose = () => {
     onOpenChange(false);
     setSearchQuery("");
-    setSearchResults([]);
+    setDebouncedQuery("");
   };
+
+  const handleKeyPress = (e: React.KeyboardEvent) => {
+    if (e.key === "Enter") {
+      handleSearch();
+    }
+  };
+
+  const hasSearched = Boolean(debouncedQuery);
+  const hasResults = searchResults.length > 0;
+  const showNoResults = hasSearched && !hasResults && !isLoading && !error;
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-lg bg-white/70 backdrop-blur-sm border border-white/20">
+      <DialogContent className="sm:max-w-lg bg-white/80 backdrop-blur-sm border border-white/20">
         <DialogHeader>
           <DialogTitle>Város kiválasztása</DialogTitle>
         </DialogHeader>
@@ -74,22 +69,54 @@ export function CityModal({
               placeholder="Írja be a város nevét..."
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              onKeyPress={(e) => e.key === "Enter" && handleSearch()}
-              className="flex-1"
+              onKeyDown={handleKeyPress}
+              className="flex-1 bg-white/70 text-black placeholder:text-black/50 focus:bg-white/90"
+              disabled={isLoading}
             />
-            <Button onClick={handleSearch} disabled={isLoading}>
+            <Button
+              variant="secondary"
+              className="bg-black hover:bg-black/80 cursor-pointer text-white"
+              onClick={handleSearch}
+              disabled={isLoading || !searchQuery.trim()}
+            >
               {isLoading ? "Keres..." : "Keresés"}
             </Button>
           </div>
 
+          {/* Loading State */}
+          {isLoading && (
+            <div className="text-center py-4">
+              <div className="text-2xl mb-2">🔍</div>
+              <p className="text-muted-foreground">Keresés...</p>
+            </div>
+          )}
+
+          {/* Error Message */}
+          {error && (
+            <div className="text-center text-red-600 py-4">
+              <div className="text-2xl mb-2">❌</div>
+              <p className="text-sm">
+                Hiba történt a keresés során. Kérjük, próbálja újra.
+              </p>
+            </div>
+          )}
+
+          {/* No Results */}
+          {showNoResults && (
+            <div className="text-center text-muted-foreground py-4">
+              <div className="text-2xl mb-2">🏙️</div>
+              <p className="text-sm">Nem található város ezzel a névvel.</p>
+            </div>
+          )}
+
           {/* Search Results */}
-          {searchResults.length > 0 && (
-            <div className="max-h-60 overflow-y-auto space-y-2">
+          {hasResults && (
+            <div className="max-h-60 overflow-y-auto space-y-2 p-3">
               {searchResults.map((city) => (
                 <button
                   key={city.id}
                   onClick={() => handleCitySelect(city)}
-                  className="w-full text-left p-3 rounded-lg border hover:bg-accent hover:text-accent-foreground transition-colors"
+                  className="w-full text-left p-3 rounded-lg cursor-pointer bg-white/70 border hover:bg-accent hover:text-accent-foreground hover:bg-white/10 transition-colors focus:outline-none focus:ring-2 focus:ring-ring-offset-2 focus:ring-offset-background focus:ring-primary"
                 >
                   <div className="font-medium">{city.name}</div>
                   <div className="text-sm text-muted-foreground">
@@ -99,13 +126,6 @@ export function CityModal({
                 </button>
               ))}
             </div>
-          )}
-
-          {/* No Results */}
-          {searchResults.length === 0 && searchQuery && !isLoading && (
-            <p className="text-center text-muted-foreground py-4">
-              Nem található város ezzel a névvel.
-            </p>
           )}
         </div>
       </DialogContent>
