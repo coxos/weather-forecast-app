@@ -1,7 +1,41 @@
+import { useState, useEffect } from "react";
 import { Button } from "./components/ui/button";
+import { CityModal } from "@/components/CityModal";
 import "./index.css";
 
+interface City {
+  id: number;
+  name: string;
+  country: string;
+  latitude: number;
+  longitude: number;
+  admin1?: string;
+}
+
 function App() {
+  const [selectedCity, setSelectedCity] = useState<City | null>(null);
+  const [showCityModal, setShowCityModal] = useState(false);
+
+  // Load saved city from localStorage
+  useEffect(() => {
+    const savedCity = localStorage.getItem("weather-app-selected-city");
+    if (savedCity) {
+      try {
+        setSelectedCity(JSON.parse(savedCity));
+      } catch (error) {
+        console.error("Error parsing saved city:", error);
+      }
+    } else {
+      // No city selected, show modal immediately
+      setShowCityModal(true);
+    }
+  }, []);
+
+  const handleCitySelect = (city: City) => {
+    setSelectedCity(city);
+    localStorage.setItem("weather-app-selected-city", JSON.stringify(city));
+  };
+
   return (
     <div className="min-h-screen bg-gradient-to-b from-[#7CB9E8] to-[#A3D4FA]">
       {/* Main Content - Mobile first, then desktop grid */}
@@ -14,9 +48,9 @@ function App() {
               variant="outline"
               size="sm"
               className="text-white cursor-pointer border-white/20 hover:bg-white/10 hover:border-white/40 mb-2"
-              onClick={() => console.log("Open city modal")}
+              onClick={() => setShowCityModal(true)}
             >
-              Város neve
+              {selectedCity ? selectedCity.name : "Válasszon várost"}
             </Button>
 
             <div className="text-6xl font-light mb-2">25°C</div>
@@ -79,6 +113,13 @@ function App() {
       <footer className="text-center mt-8 text-white/70">
         <p className="text-sm">Készítette: Görbe János</p>
       </footer>
+
+      {/* City Selection Modal */}
+      <CityModal
+        open={showCityModal}
+        onOpenChange={setShowCityModal}
+        onCitySelect={handleCitySelect}
+      />
     </div>
   );
 }
