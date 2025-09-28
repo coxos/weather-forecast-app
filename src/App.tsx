@@ -2,6 +2,7 @@ import { useState, useEffect } from "react";
 import { Button } from "./components/ui/button";
 import { CityModal } from "@/components/CityModal";
 import { useWeatherData } from "@/hooks/useWeatherData";
+import { TemperatureChart } from "@/components/TemperatureChart";
 import "./index.css";
 
 interface City {
@@ -47,6 +48,7 @@ function App() {
   return (
     <div className="min-h-screen bg-gradient-to-b from-[#7CB9E8] to-[#A3D4FA]">
       {/* Main Content - Mobile first, then desktop grid */}
+
       <main className="max-w-7xl mx-auto px-6 pt-8">
         {selectedCity ? (
           <>
@@ -197,6 +199,17 @@ function App() {
                 ) : null}
               </div>
             </div>
+
+            {/* Temperature Chart - Both mobile & desktop */}
+            <div className="bg-white/10 backdrop-blur-sm rounded-2xl p-6 text-white">
+              <h3 className="text-lg font-medium mb-4">
+                Hőmérséklet alakulása
+              </h3>
+              <TemperatureChart
+                dailyWeather={weatherData?.daily}
+                isLoading={isWeatherLoading}
+              />
+            </div>
           </>
         ) : (
           /* No city selected */
@@ -207,14 +220,6 @@ function App() {
             </p>
           </div>
         )}
-
-        {/* Temperature Chart - Both mobile & desktop */}
-        <div className="bg-white/10 backdrop-blur-sm rounded-2xl p-6 text-white">
-          <h3 className="text-lg font-medium mb-4">Hőmérséklet alakulása</h3>
-          <div className="h-48 flex items-center justify-center border border-white/20 rounded-lg">
-            <p className="text-white/60">📊 Chart placeholder</p>
-          </div>
-        </div>
       </main>
 
       {/* Footer */}
